@@ -18,6 +18,7 @@
     --muted: #BF8A6B;
     --green: #2e7d32;
     --watching: #c17a00;
+    --recommend: #1A6B9A;
   }
 
   * { margin: 0; padding: 0; box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
@@ -154,6 +155,8 @@
   .row:hover { background: var(--surface); border-color: var(--border); }
 
   .row.watching { border-left: 3px solid var(--watching); padding-left: 11px; }
+  .row.recommended { border-left: 3px solid var(--recommend); padding-left: 11px; background: rgba(26,107,154,.03); }
+  .row.recommended:hover { background: rgba(26,107,154,.06); border-color: rgba(26,107,154,.2); border-left-color: var(--recommend); }
   .row.seen { opacity: 0.45; }
   .row.seen:hover { opacity: 0.75; }
 
@@ -187,7 +190,10 @@
   .tag { padding: 2px 8px; border-radius: 20px; font-size: 10px; letter-spacing: 0.5px; font-weight: 500; text-transform: uppercase; white-space: nowrap; }
   .tag-film  { background: rgba(140,14,3,.10); color: var(--accent2); border: 1px solid rgba(140,14,3,.25); }
   .tag-série { background: rgba(217,153,35,.15); color: #8a5e00; border: 1px solid rgba(217,153,35,.4); }
+  .tag-youtube { background: rgba(255,0,0,.10); color: #cc0000; border: 1px solid rgba(255,0,0,.25); }
   .tag-platform { background: rgba(17,34,38,.06); color: var(--muted); border: 1px solid var(--border); }
+
+  .recommend-badge { font-size: 10px; color: var(--recommend); background: rgba(26,107,154,.12); border: 1px solid rgba(26,107,154,.3); padding: 2px 8px; border-radius: 20px; letter-spacing: 0.5px; font-weight: 500; white-space: nowrap; flex-shrink: 0; }
 
   /* Actions */
   .row-actions {
@@ -553,6 +559,7 @@
     }
     .row:hover { border-color: var(--border); }
     .row.watching { border-left: 3px solid var(--watching); padding-left: 7px; }
+    .row.recommended { padding-left: 7px; }
 
     .row-tags { display: none; }
     .row-main { flex-wrap: nowrap; align-items: center; }
@@ -624,14 +631,11 @@
   <button class="filter-btn active" onclick="setFilter('all',this)">Tout</button>
   <button class="filter-btn" onclick="setFilter('film',this)">Films</button>
   <button class="filter-btn" onclick="setFilter('série',this)">Séries</button>
-  <div class="toolbar-sep"></div>
-  <button class="filter-btn" onclick="setFilter('netflix',this)">Netflix</button>
-  <button class="filter-btn" onclick="setFilter('apple',this)">Apple TV+</button>
-  <button class="filter-btn" onclick="setFilter('disney',this)">Disney+</button>
+  <button class="filter-btn" onclick="setFilter('youtube',this)">YouTube</button>
   <div class="toolbar-sep"></div>
   <button class="filter-btn" onclick="setFilter('unseen',this)">Non vus</button>
   <button class="filter-btn" onclick="setFilter('watching',this)">En cours</button>
-  <button class="filter-btn" onclick="setFilter('priority',this)">🔥 Priorité</button>
+  <button class="filter-btn" onclick="setFilter('priority',this)">Priorité</button>
   <button class="add-btn" onclick="openAddModal()">+ Ajouter</button>
 </div>
 
@@ -652,6 +656,15 @@
     <div class="section-line"></div>
   </div>
   <div class="list" id="films-list"></div>
+</div>
+
+<div class="section" id="section-youtube">
+  <div class="section-header">
+    <div class="section-title">YOUTUBE</div>
+    <div class="section-count" id="count-youtube">—</div>
+    <div class="section-line"></div>
+  </div>
+  <div class="list" id="youtube-list"></div>
 </div>
 
 <!-- FAB mobile -->
@@ -705,6 +718,7 @@
           <select id="f-type">
             <option value="film">Film</option>
             <option value="série">Série</option>
+            <option value="youtube">YouTube</option>
           </select>
         </div>
         <div class="form-group">
@@ -718,10 +732,6 @@
             <option>Autre</option>
           </select>
         </div>
-      </div>
-      <div class="form-group" style="margin-bottom:14px">
-        <label>Genres (séparés par virgule)</label>
-        <input type="text" id="f-genres" placeholder="ex: Thriller, Sci-fi">
       </div>
       <div class="form-group" style="margin-bottom:20px">
         <label>Priorité</label>
@@ -767,6 +777,7 @@
         <select id="e-type">
           <option value="film">Film</option>
           <option value="série">Série</option>
+          <option value="youtube">YouTube</option>
         </select>
       </div>
       <div class="form-group">
@@ -780,10 +791,6 @@
           <option>Autre</option>
         </select>
       </div>
-    </div>
-    <div class="form-group" style="margin-bottom:20px">
-      <label>Genres (séparés par virgule)</label>
-      <input type="text" id="e-genres" placeholder="ex: Thriller, Sci-fi">
     </div>
     <div class="form-group" style="margin-bottom:20px">
       <label>Priorité</label>
@@ -812,6 +819,38 @@
   </div>
 </div>
 
+<!-- MODAL RECOMMANDER -->
+<div class="modal-overlay" id="recommend-modal">
+  <div class="rating-modal">
+    <h3>Recommander ?</h3>
+    <div class="rating-subtitle">Envoyer <strong id="recommend-title"></strong> à <strong id="recommend-to"></strong> ?</div>
+    <div class="rating-footer" style="margin-top:24px">
+      <button class="btn-skip" onclick="skipRecommend()">Non merci</button>
+      <button class="btn-rate" onclick="sendRecommend()">Recommander 💌</button>
+    </div>
+  </div>
+</div>
+
+<!-- MODAL ACCEPTER RECOMMANDATION -->
+<div class="modal-overlay" id="accept-modal">
+  <div class="modal">
+    <div class="modal-title">Recommandation</div>
+    <div id="accept-subtitle" style="font-size:13px;color:var(--muted);margin-bottom:20px"></div>
+    <div class="form-group" style="margin-bottom:20px">
+      <label>Priorité</label>
+      <div class="priority-select" id="accept-priority-select">
+        <button class="priority-opt" onclick="setAcceptPriority(1,this)">⭐ Basse</button>
+        <button class="priority-opt selected" onclick="setAcceptPriority(2,this)">⭐⭐ Moyenne</button>
+        <button class="priority-opt" onclick="setAcceptPriority(3,this)">⭐⭐⭐ Haute</button>
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn-cancel" style="color:var(--accent2);border-color:rgba(140,14,3,.3)" onclick="refuseRecommendModal()">Refuser</button>
+      <button class="btn-confirm" onclick="acceptRecommend()">Ajouter à ma liste</button>
+    </div>
+  </div>
+</div>
+
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-database-compat.js"></script>
 <script>
@@ -819,6 +858,7 @@
 // DATA
 // ══════════════════════════════════════
 const defaultData = {
+  youtube: [],
   series: [
     { title:"Pluribus",       year:2025, platform:"Apple TV+",    genres:["Sci-fi","Thriller"],        desc:"Un virus rend toute l'humanité heureuse. Une seule femme résiste.", priority:3 },
     { title:"Succession",     year:2018, platform:"Netflix",       genres:["Drame","Comédie noire"],    desc:"Guerre de pouvoir dans une famille milliardaire. Écriture parfaite.", priority:3 },
@@ -886,6 +926,12 @@ let pendingDelete  = null;
 let pendingRating      = 0;
 let ratingTarget       = null; // { title, type, index }
 
+// recommendation state
+let recommendations  = [];
+let pendingRecommend = null;
+let acceptTarget     = null;
+let selAcceptPriority = 2;
+
 // ══════════════════════════════════════
 // RENDER
 // ══════════════════════════════════════
@@ -926,7 +972,7 @@ function createRow(item, type, index) {
         ${ratingEl}
       </div>
       <div class="row-tags">
-        <span class="tag tag-${type}">${type}</span>
+        <span class="tag tag-${type}">${type === 'youtube' ? 'YouTube' : type}</span>
         <span class="tag tag-platform">${item.platform}</span>
       </div>
     </div>
@@ -942,14 +988,39 @@ function createRow(item, type, index) {
   </div>`;
 }
 
+function createRecommendRow(item) {
+  const safe = item.title.replace(/\\/g,'\\\\').replace(/'/g,"\\'");
+  return `<div class="row recommended"
+       data-type="${item.type}"
+       data-platform="${(item.platform||'').toLowerCase()}"
+       data-priority="3"
+       data-watching="false"
+       data-recommended="true">
+    <div class="row-click" onclick="openAcceptModal('${safe}')">
+      <div class="row-priority"><div class="dot"></div><div class="dot"></div><div class="dot"></div></div>
+      <div class="row-main">
+        <span class="row-title">${item.title}</span>
+        <span class="row-year">${item.year || ''}</span>
+      </div>
+      <span class="recommend-badge">💌 ${item.fromProfile}</span>
+    </div>
+    <div class="row-actions" style="opacity:1">
+      <button class="btn-action btn-watching" onclick="openAcceptModal('${safe}')">Voir</button>
+      <button class="btn-action btn-delete" onclick="refuseRecommendDirect('${safe}',event)">🗑</button>
+    </div>
+  </div>`;
+}
+
 function byPriority(a, b) { return b.priority - a.priority; }
 
 function renderSection(items, type, listId) {
+  const recs     = recommendations.filter(r => r.type === type);
   const unseen   = items.filter(it => !seenSet.has(it.title) && !watchingSet.has(it.title)).sort(byPriority);
   const watching = items.filter(it => !seenSet.has(it.title) &&  watchingSet.has(it.title)).sort(byPriority);
   const seen     = items.filter(it =>  seenSet.has(it.title)).sort(byPriority);
 
   let html = '';
+  recs.forEach(r => { html += createRecommendRow(r); });
   unseen.forEach(it => { html += createRow(it, type, items.indexOf(it)); });
 
   if (watching.length) {
@@ -965,8 +1036,9 @@ function renderSection(items, type, listId) {
 }
 
 function render() {
-  renderSection(data.series, 'série', 'series-list');
-  renderSection(data.films,  'film',  'films-list');
+  renderSection(data.series,  'série',   'series-list');
+  renderSection(data.films,   'film',    'films-list');
+  renderSection(data.youtube, 'youtube', 'youtube-list');
   applyFilter(currentFilter);
   updateStats();
 }
@@ -987,16 +1059,17 @@ function applyFilter(type) {
     if      (type === 'all')      show = true;
     else if (type === 'film')     show = row.dataset.type === 'film';
     else if (type === 'série')    show = row.dataset.type === 'série';
+    else if (type === 'youtube')  show = row.dataset.type === 'youtube';
     else if (type === 'netflix')  show = row.dataset.platform.includes('netflix');
     else if (type === 'apple')    show = row.dataset.platform.includes('apple');
     else if (type === 'disney')   show = row.dataset.platform.includes('disney');
     else if (type === 'unseen')   show = !row.classList.contains('seen') && !row.classList.contains('watching');
-    else if (type === 'watching') show = row.classList.contains('watching');
+    else if (type === 'watching') show = row.classList.contains('watching') && row.dataset.recommended !== 'true';
     else if (type === 'priority') show = row.dataset.priority === '3';
     row.classList.toggle('hidden', !show);
   });
 
-  ['series','films'].forEach(sec => {
+  ['series','films','youtube'].forEach(sec => {
     const list    = document.getElementById(sec + '-list');
     const section = document.getElementById('section-' + sec);
     const visible = [...list.querySelectorAll('.row:not(.hidden)')];
@@ -1009,7 +1082,7 @@ function applyFilter(type) {
 // STATS
 // ══════════════════════════════════════
 function updateStats() {
-  const all          = [...data.series, ...data.films];
+  const all          = [...data.series, ...data.films, ...data.youtube];
   const total        = all.length;
   const seenCount    = all.filter(it => seenSet.has(it.title)).length;
   const watchCount   = all.filter(it => watchingSet.has(it.title)).length;
@@ -1019,23 +1092,26 @@ function updateStats() {
   document.getElementById('progress').style.width       = total ? (seenCount / total * 100) + '%' : '0%';
 }
 
-function saveData()     { dbRef.child('profiles/' + currentProfile + '/data').set(data); }
-function saveSeen()     { dbRef.child('profiles/' + currentProfile + '/seen').set([...seenSet]); }
-function saveWatching() { dbRef.child('profiles/' + currentProfile + '/watching').set([...watchingSet]); }
-function saveRatings()  { dbRef.child('profiles/' + currentProfile + '/ratings').set(ratings); }
-function saveDeleted()  { dbRef.child('profiles/' + currentProfile + '/deleted').set([...deletedTitles]); }
+function saveData()            { dbRef.child('profiles/' + currentProfile + '/data').set(data); }
+function saveSeen()            { dbRef.child('profiles/' + currentProfile + '/seen').set([...seenSet]); }
+function saveWatching()        { dbRef.child('profiles/' + currentProfile + '/watching').set([...watchingSet]); }
+function saveRatings()         { dbRef.child('profiles/' + currentProfile + '/ratings').set(ratings); }
+function saveDeleted()         { dbRef.child('profiles/' + currentProfile + '/deleted').set([...deletedTitles]); }
+function saveRecommendations() { dbRef.child('profiles/' + currentProfile + '/recommendations').set(recommendations); }
 
 function loadProfile(fb, name) {
   const profile = ((fb || {}).profiles || {})[name] || {};
   const d       = profile.data || JSON.parse(JSON.stringify(defaultData));
   data = {
-    films:  Array.isArray(d.films)  ? d.films  : [],
-    series: Array.isArray(d.series) ? d.series : []
+    films:   Array.isArray(d.films)   ? d.films   : [],
+    series:  Array.isArray(d.series)  ? d.series  : [],
+    youtube: Array.isArray(d.youtube) ? d.youtube : []
   };
-  seenSet       = new Set(Array.isArray(profile.seen)    ? profile.seen    : []);
-  watchingSet   = new Set(Array.isArray(profile.watching) ? profile.watching : []);
-  ratings       = (profile.ratings && typeof profile.ratings === 'object') ? profile.ratings : {};
-  deletedTitles = new Set(Array.isArray(profile.deleted) ? profile.deleted : []);
+  seenSet         = new Set(Array.isArray(profile.seen)            ? profile.seen            : []);
+  watchingSet     = new Set(Array.isArray(profile.watching)        ? profile.watching        : []);
+  ratings         = (profile.ratings && typeof profile.ratings === 'object') ? profile.ratings : {};
+  deletedTitles   = new Set(Array.isArray(profile.deleted)         ? profile.deleted         : []);
+  recommendations = Array.isArray(profile.recommendations)         ? profile.recommendations : [];
 }
 
 function switchProfile(name, btn) {
@@ -1097,12 +1173,95 @@ function selectStar(n) {
 
 function confirmSeen(rating) {
   if (!ratingTarget) return;
-  const { title } = ratingTarget;
+  const { title, type } = ratingTarget;
   seenSet.add(title);
   if (rating > 0) ratings[title] = rating;
   saveSeen(); saveRatings();
+
+  // Gather item data for potential recommendation
+  const arr = type === 'série' ? data.series : (type === 'film' ? data.films : data.youtube);
+  const itemData = arr.find(it => it.title === title) || { title };
+  pendingRecommend = { ...itemData, type };
+
   ratingTarget = null; pendingRating = 0;
   document.getElementById('rating-modal').classList.remove('open');
+  render();
+
+  // Propose recommending to the other profile
+  const other = currentProfile === 'Romain' ? 'Helenou' : 'Romain';
+  document.getElementById('recommend-title').textContent = title;
+  document.getElementById('recommend-to').textContent = other;
+  document.getElementById('recommend-modal').classList.add('open');
+}
+
+// ══════════════════════════════════════
+// RECOMMENDATIONS
+// ══════════════════════════════════════
+function skipRecommend() {
+  pendingRecommend = null;
+  document.getElementById('recommend-modal').classList.remove('open');
+}
+
+function sendRecommend() {
+  if (!pendingRecommend) { skipRecommend(); return; }
+  const other     = currentProfile === 'Romain' ? 'Helenou' : 'Romain';
+  const otherPro  = ((fbSnapshot || {}).profiles || {})[other] || {};
+  const otherRecs = Array.isArray(otherPro.recommendations) ? [...otherPro.recommendations] : [];
+  if (!otherRecs.find(r => r.title === pendingRecommend.title)) {
+    otherRecs.push({ ...pendingRecommend, fromProfile: currentProfile });
+    dbRef.child('profiles/' + other + '/recommendations').set(otherRecs);
+  }
+  pendingRecommend = null;
+  document.getElementById('recommend-modal').classList.remove('open');
+}
+
+function openAcceptModal(title) {
+  acceptTarget = recommendations.find(r => r.title === title);
+  if (!acceptTarget) return;
+  selAcceptPriority = 2;
+  document.getElementById('accept-subtitle').textContent = 'Recommandé par ' + acceptTarget.fromProfile;
+  document.querySelectorAll('#accept-priority-select .priority-opt').forEach((b, i) => {
+    b.classList.toggle('selected', i === 1);
+  });
+  document.getElementById('accept-modal').classList.add('open');
+}
+
+function closeAcceptModal() {
+  document.getElementById('accept-modal').classList.remove('open');
+  acceptTarget = null;
+}
+
+function setAcceptPriority(v, btn) {
+  selAcceptPriority = v;
+  document.querySelectorAll('#accept-priority-select .priority-opt').forEach(b => b.classList.remove('selected'));
+  btn.classList.add('selected');
+}
+
+function acceptRecommend() {
+  if (!acceptTarget) return;
+  const { fromProfile, recommended, ...item } = acceptTarget;
+  item.priority = selAcceptPriority;
+  const type = acceptTarget.type;
+  const arr  = type === 'série' ? data.series : (type === 'film' ? data.films : data.youtube);
+  if (!arr.find(it => it.title === item.title)) arr.unshift(item);
+  recommendations = recommendations.filter(r => r.title !== acceptTarget.title);
+  saveData(); saveRecommendations();
+  closeAcceptModal();
+  render();
+}
+
+function refuseRecommendDirect(title, e) {
+  e.stopPropagation();
+  recommendations = recommendations.filter(r => r.title !== title);
+  saveRecommendations();
+  render();
+}
+
+function refuseRecommendModal() {
+  if (!acceptTarget) return;
+  recommendations = recommendations.filter(r => r.title !== acceptTarget.title);
+  saveRecommendations();
+  closeAcceptModal();
   render();
 }
 
@@ -1121,7 +1280,7 @@ function closeDeleteModal() {
 function confirmDelete() {
   if (!pendingDelete) return;
   const { type, index } = pendingDelete;
-  const arr   = type === 'série' ? data.series : data.films;
+  const arr   = type === 'série' ? data.series : (type === 'film' ? data.films : data.youtube);
   const title = arr[index].title;
   arr.splice(index, 1);
   seenSet.delete(title);
@@ -1152,7 +1311,7 @@ function openAddModal() {
 }
 function closeAddModal() {
   document.getElementById('add-modal').classList.remove('open');
-  ['f-title','f-year','f-genres'].forEach(id => document.getElementById(id).value = '');
+  ['f-title','f-year'].forEach(id => document.getElementById(id).value = '');
   selPriority = 2;
   document.querySelectorAll('#add-modal .priority-opt').forEach((b,i) => b.classList.toggle('selected', i===1));
 }
@@ -1210,7 +1369,7 @@ function copyItem(title, type) {
 }
 function setPriority(v, btn) {
   selPriority = v;
-  document.querySelectorAll('.priority-opt').forEach(b => b.classList.remove('selected'));
+  document.querySelectorAll('#add-modal .priority-opt').forEach(b => b.classList.remove('selected'));
   btn.classList.add('selected');
 }
 // ══════════════════════════════════════
@@ -1220,7 +1379,7 @@ let editTarget = null; // { type, index }
 let selEditPriority = 2;
 
 function openEditModal(type, index) {
-  const arr  = type === 'série' ? data.series : data.films;
+  const arr  = type === 'série' ? data.series : (type === 'film' ? data.films : data.youtube);
   const item = arr[index];
   if (!item) return;
   editTarget = { type, index };
@@ -1228,7 +1387,6 @@ function openEditModal(type, index) {
 
   document.getElementById('e-title').value    = item.title;
   document.getElementById('e-year').value     = item.year;
-  document.getElementById('e-genres').value   = (item.genres || []).join(', ');
   document.getElementById('e-type').value     = type;
 
   // platform
@@ -1264,16 +1422,15 @@ function saveEdit() {
   const newType  = document.getElementById('e-type').value;
   const year     = parseInt(document.getElementById('e-year').value) || new Date().getFullYear();
   const platform = document.getElementById('e-platform').value;
-  const genres   = document.getElementById('e-genres').value.split(',').map(g => g.trim()).filter(Boolean);
 
-  const srcArr  = type === 'série' ? data.series : data.films;
+  const srcArr   = type === 'série' ? data.series : (type === 'film' ? data.films : data.youtube);
   const oldTitle = srcArr[index].title;
-  const item    = { ...srcArr[index], title, year, platform, genres: genres.length ? genres : ['Autre'], priority: selEditPriority };
+  const item     = { ...srcArr[index], title, year, platform, priority: selEditPriority };
 
   // Handle type change
   if (newType !== type) {
     srcArr.splice(index, 1);
-    const destArr = newType === 'série' ? data.series : data.films;
+    const destArr = newType === 'série' ? data.series : (newType === 'film' ? data.films : data.youtube);
     destArr.unshift(item);
   } else {
     srcArr[index] = item;
@@ -1298,10 +1455,10 @@ function addItem() {
   const type     = document.getElementById('f-type').value;
   const year     = parseInt(document.getElementById('f-year').value) || new Date().getFullYear();
   const platform = document.getElementById('f-platform').value;
-  const genres   = document.getElementById('f-genres').value.split(',').map(g => g.trim()).filter(Boolean);
-  const item     = { title, year, platform, genres: genres.length ? genres : ['Autre'], priority: selPriority };
-  if (type === 'série') data.series.unshift(item);
-  else                  data.films.unshift(item);
+  const item     = { title, year, platform, priority: selPriority };
+  if (type === 'série')        data.series.unshift(item);
+  else if (type === 'youtube') data.youtube.unshift(item);
+  else                         data.films.unshift(item);
   saveData();
   closeAddModal();
   render();
@@ -1310,13 +1467,15 @@ function addItem() {
 // ══════════════════════════════════════
 // MODAL CLOSE HANDLERS
 // ══════════════════════════════════════
-['add-modal','edit-modal','delete-modal','rating-modal'].forEach(id => {
+['add-modal','edit-modal','delete-modal','rating-modal','recommend-modal','accept-modal'].forEach(id => {
   document.getElementById(id).addEventListener('click', e => {
     if (e.target !== e.currentTarget) return;
-    if (id === 'add-modal')    closeAddModal();
-    if (id === 'edit-modal')   closeEditModal();
-    if (id === 'delete-modal') closeDeleteModal();
-    if (id === 'rating-modal') { document.getElementById('rating-modal').classList.remove('open'); ratingTarget = null; }
+    if (id === 'add-modal')        closeAddModal();
+    if (id === 'edit-modal')       closeEditModal();
+    if (id === 'delete-modal')     closeDeleteModal();
+    if (id === 'rating-modal')     { document.getElementById('rating-modal').classList.remove('open'); ratingTarget = null; }
+    if (id === 'recommend-modal')  skipRecommend();
+    if (id === 'accept-modal')     closeAcceptModal();
   });
 });
 
@@ -1325,6 +1484,8 @@ document.addEventListener('keydown', e => {
   closeAddModal(); closeEditModal(); closeDeleteModal();
   document.getElementById('rating-modal').classList.remove('open');
   ratingTarget = null;
+  skipRecommend();
+  closeAcceptModal();
 });
 
 // ══════════════════════════════════════
@@ -1344,6 +1505,7 @@ function init() {
         loadProfile(fb, currentProfile);
 
         // Merge nouveaux items defaultData pas encore dans le profil actif
+        if (!Array.isArray(data.youtube)) data.youtube = [];
         const filmTitles  = new Set(data.films.map(f => f.title));
         const serieTitles = new Set(data.series.map(s => s.title));
         let needsSave = false;
