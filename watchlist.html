@@ -1072,7 +1072,14 @@ function confirmDelete() {
   watchingSet.delete(title);
   delete ratings[title];
   deletedTitles.add(title);
-  saveSeen(); saveWatching(); saveRatings(); saveData(); saveDeleted();
+  // Écriture atomique pour éviter les conflits avec onValue
+  const update = {};
+  update['profiles/' + currentProfile + '/data']     = data;
+  update['profiles/' + currentProfile + '/seen']     = [...seenSet];
+  update['profiles/' + currentProfile + '/watching'] = [...watchingSet];
+  update['profiles/' + currentProfile + '/ratings']  = ratings;
+  update['profiles/' + currentProfile + '/deleted']  = [...deletedTitles];
+  dbRef.update(update);
   closeDeleteModal();
   render();
 }
