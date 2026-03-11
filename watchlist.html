@@ -532,7 +532,7 @@
       padding: 10px 6px;
       border-right: 1px solid var(--border);
     }
-    .stat:last-child { border-right: none; }
+    .stat:nth-child(3) { border-right: none; }
     .stat-num { font-size: 22px; }
     .stat-label { font-size: 9px; letter-spacing: 1px; }
     .progress-wrap { display: none; }
@@ -576,8 +576,8 @@
       max-width: 100%;
       padding-bottom: calc(20px + env(safe-area-inset-bottom));
     }
-    .modal { max-height: 92vh; padding: 22px 18px; }
-    .rating-modal { padding: 28px 20px 20px; }
+    .modal { max-height: 92vh; padding: 22px 18px; padding-bottom: calc(22px + env(safe-area-inset-bottom)); }
+    .rating-modal { padding: 28px 20px; padding-bottom: calc(20px + env(safe-area-inset-bottom)); }
     .form-row { flex-direction: column; gap: 10px; }
     .priority-select { flex-direction: column; gap: 6px; }
     .priority-opt { min-height: 44px; }
