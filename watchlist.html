@@ -19,6 +19,7 @@
     --green: #2e7d32;
     --watching: #c17a00;
     --recommend: #1A6B9A;
+    --attend: #7c3aed;
   }
 
   * { margin: 0; padding: 0; box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
@@ -130,6 +131,23 @@
   }
   .add-btn:hover { opacity: 0.85; }
 
+  .attend-btn {
+    flex-shrink: 0;
+    padding: 7px 15px;
+    background: transparent;
+    border: 1px solid rgba(124,58,237,.4);
+    color: var(--attend);
+    border-radius: 8px;
+    font-family: 'DM Sans', sans-serif;
+    font-size: 13px;
+    font-weight: 500;
+    cursor: pointer;
+    transition: all 0.2s;
+    white-space: nowrap;
+    min-height: 36px;
+  }
+  .attend-btn:hover { background: rgba(124,58,237,.1); border-color: var(--attend); }
+
   /* ── SECTION ── */
   .section { padding: 28px 44px; }
 
@@ -194,6 +212,13 @@
   .tag-platform { background: rgba(17,34,38,.06); color: var(--muted); border: 1px solid var(--border); }
 
   .recommend-badge { font-size: 10px; color: var(--recommend); background: rgba(26,107,154,.12); border: 1px solid rgba(26,107,154,.3); padding: 2px 8px; border-radius: 20px; letter-spacing: 0.5px; font-weight: 500; white-space: nowrap; flex-shrink: 0; }
+
+  .attend-moi-badge {
+    font-size: 10px; color: var(--attend);
+    background: rgba(124,58,237,.1); border: 1px solid rgba(124,58,237,.3);
+    padding: 2px 8px; border-radius: 20px;
+    letter-spacing: 0.5px; font-weight: 500; white-space: nowrap; flex-shrink: 0;
+  }
 
   /* Actions */
   .row-actions {
@@ -497,6 +522,30 @@
   .copy-item-title { flex: 1; font-family: 'Bebas Neue', sans-serif; font-size: 16px; letter-spacing: 0.5px; }
   .copy-item-year  { font-size: 11px; color: var(--muted); flex-shrink: 0; }
 
+  /* ── ATTEND MOI MODAL ── */
+  .attend-list {
+    max-height: 360px; overflow-y: auto;
+    display: flex; flex-direction: column; gap: 5px;
+    margin-bottom: 16px;
+  }
+  .attend-item {
+    display: flex; align-items: center; gap: 12px;
+    padding: 10px 12px; border: 1px solid var(--border);
+    border-radius: 8px; cursor: pointer; transition: all 0.2s;
+  }
+  .attend-item:hover { border-color: var(--attend); background: rgba(124,58,237,.05); }
+  .attend-item.selected { border-color: var(--attend); background: rgba(124,58,237,.08); }
+  .attend-item-check {
+    width: 22px; height: 22px; border: 2px solid var(--border); border-radius: 50%;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 12px; color: var(--attend); flex-shrink: 0; transition: all 0.15s;
+  }
+  .attend-item.selected .attend-item-check { border-color: var(--attend); background: var(--attend); color: #fff; }
+  .attend-item-info { flex: 1; min-width: 0; display: flex; align-items: baseline; gap: 8px; overflow: hidden; }
+  .attend-item-title { font-family: 'Bebas Neue', sans-serif; font-size: 16px; letter-spacing: 0.5px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .attend-item-year  { font-size: 11px; color: var(--muted); flex-shrink: 0; }
+  .attend-modal-sub  { font-size: 13px; color: var(--muted); margin-bottom: 16px; }
+
   .hidden { display: none !important; }
 
   @keyframes fadeIn {
@@ -589,6 +638,11 @@
     .priority-select { flex-direction: column; gap: 6px; }
     .priority-opt { min-height: 44px; }
     .star-btn { font-size: 32px; }
+
+    /* Attend moi badge réduit sur mobile : emoji seul */
+    .attend-name { display: none; }
+    .attend-moi-badge { font-size: 14px; background: none; border: none; padding: 0; letter-spacing: 0; flex-shrink: 0; }
+    .attend-list { max-height: 55vh; }
   }
 </style>
 </head>
@@ -636,6 +690,7 @@
   <button class="filter-btn" onclick="setFilter('unseen',this)">Non vus</button>
   <button class="filter-btn" onclick="setFilter('watching',this)">En cours</button>
   <button class="filter-btn" onclick="setFilter('priority',this)">Priorité</button>
+  <button class="attend-btn" onclick="openAttendMoiModal()">🤝 Attend moi</button>
   <button class="add-btn" onclick="openAddModal()">+ Ajouter</button>
 </div>
 
@@ -851,6 +906,18 @@
   </div>
 </div>
 
+<!-- MODAL ATTEND MOI -->
+<div class="modal-overlay" id="attend-modal">
+  <div class="modal">
+    <div class="modal-title">Attend moi 🤝</div>
+    <p class="attend-modal-sub" id="attend-subtitle"></p>
+    <div class="attend-list" id="attend-list"></div>
+    <div class="modal-footer">
+      <button class="btn-cancel" onclick="closeAttendMoiModal()">Fermer</button>
+    </div>
+  </div>
+</div>
+
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-database-compat.js"></script>
 <script>
@@ -932,6 +999,10 @@ let pendingRecommend = null;
 let acceptTarget     = null;
 let selAcceptPriority = 2;
 
+// attend moi state
+let attendMoiSet      = new Set(); // titres de l'autre profil que je veux voir ensemble
+let otherAttendMoiSet = new Set(); // titres dans ma liste que l'autre veut voir avec moi
+
 // ══════════════════════════════════════
 // RENDER
 // ══════════════════════════════════════
@@ -951,6 +1022,11 @@ function createRow(item, type, index) {
     : (isSeen ? `<span class="row-rating" style="color:var(--muted)">vu</span>` : '');
 
   const safeTitle = item.title.replace(/\\/g,'\\\\').replace(/'/g,"\\'");
+
+  const otherName    = currentProfile === 'Romain' ? 'Helenou' : 'Romain';
+  const attendBadge  = otherAttendMoiSet.has(item.title)
+    ? `<span class="attend-moi-badge">🤝 <span class="attend-name">${otherName}</span></span>`
+    : '';
 
   const watchBtn = !isSeen ? `
     <button class="btn-action btn-watching"
@@ -975,6 +1051,7 @@ function createRow(item, type, index) {
         <span class="tag tag-${type}">${type === 'youtube' ? 'YouTube' : type}</span>
         <span class="tag tag-platform">${item.platform}</span>
       </div>
+      ${attendBadge}
     </div>
     <div class="row-actions">
       ${watchBtn}
@@ -1112,13 +1189,20 @@ function loadProfile(fb, name) {
   ratings         = (profile.ratings && typeof profile.ratings === 'object') ? profile.ratings : {};
   deletedTitles   = new Set(Array.isArray(profile.deleted)         ? profile.deleted         : []);
   recommendations = Array.isArray(profile.recommendations)         ? profile.recommendations : [];
+  attendMoiSet    = new Set(Array.isArray(profile.attendMoi)       ? profile.attendMoi       : []);
 }
 
 function switchProfile(name, btn) {
   currentProfile = name;
   document.querySelectorAll('.profile-btn').forEach(b => b.classList.remove('active'));
   btn.classList.add('active');
-  if (fbSnapshot) { loadProfile(fbSnapshot, name); render(); }
+  if (fbSnapshot) {
+    loadProfile(fbSnapshot, name);
+    const other = name === 'Romain' ? 'Helenou' : 'Romain';
+    const otherPro = ((fbSnapshot || {}).profiles || {})[other] || {};
+    otherAttendMoiSet = new Set(Array.isArray(otherPro.attendMoi) ? otherPro.attendMoi : []);
+    render();
+  }
 }
 
 // ══════════════════════════════════════
@@ -1263,6 +1347,73 @@ function refuseRecommendModal() {
   saveRecommendations();
   closeAcceptModal();
   render();
+}
+
+// ══════════════════════════════════════
+// ATTEND MOI
+// ══════════════════════════════════════
+function saveAttendMoi() {
+  dbRef.child('profiles/' + currentProfile + '/attendMoi').set([...attendMoiSet]);
+}
+
+function openAttendMoiModal() {
+  const other = currentProfile === 'Romain' ? 'Helenou' : 'Romain';
+  document.getElementById('attend-subtitle').textContent =
+    `Sélectionne ce que tu veux regarder avec ${other} — ils verront une icône 🤝 sur ces titres.`;
+  renderAttendList();
+  document.getElementById('attend-modal').classList.add('open');
+}
+
+function closeAttendMoiModal() {
+  document.getElementById('attend-modal').classList.remove('open');
+}
+
+function renderAttendList() {
+  const other    = currentProfile === 'Romain' ? 'Helenou' : 'Romain';
+  const otherPro = ((fbSnapshot || {}).profiles || {})[other] || {};
+  const otherD   = otherPro.data || { films: [], series: [] };
+  const otherSeen = new Set(Array.isArray(otherPro.seen) ? otherPro.seen : []);
+
+  const otherFilms  = (Array.isArray(otherD.films)  ? otherD.films  : []).filter(f => !otherSeen.has(f.title));
+  const otherSeries = (Array.isArray(otherD.series) ? otherD.series : []).filter(s => !otherSeen.has(s.title));
+
+  const items = [
+    ...otherSeries.map(s => ({ ...s, _type: 'série' })),
+    ...otherFilms.map(f  => ({ ...f, _type: 'film'  }))
+  ];
+
+  const list = document.getElementById('attend-list');
+  if (!items.length) {
+    list.innerHTML = '<div class="empty-state">Rien dans la liste de ' + other + '</div>';
+    return;
+  }
+  list.innerHTML = items.map(it => {
+    const safe = it.title.replace(/\\/g,'\\\\').replace(/'/g,"\\'");
+    const sel  = attendMoiSet.has(it.title);
+    return `<div class="attend-item${sel ? ' selected' : ''}" onclick="toggleAttendMoi('${safe}',this)">
+      <div class="attend-item-check">${sel ? '✓' : ''}</div>
+      <div class="attend-item-info">
+        <span class="attend-item-title">${it.title}</span>
+        <span class="attend-item-year">${it.year || ''}</span>
+      </div>
+      <span class="tag tag-${it._type}">${it._type}</span>
+    </div>`;
+  }).join('');
+}
+
+function toggleAttendMoi(title, el) {
+  if (attendMoiSet.has(title)) {
+    attendMoiSet.delete(title);
+    el.classList.remove('selected');
+    el.querySelector('.attend-item-check').textContent = '';
+  } else {
+    attendMoiSet.add(title);
+    el.classList.add('selected');
+    el.querySelector('.attend-item-check').textContent = '✓';
+  }
+  saveAttendMoi();
+  // Mettre à jour les badges en temps réel dans la liste principale
+  // (l'autre profil verra le badge via Firebase; mais on peut aussi rafraîchir si on est sur son propre profil)
 }
 
 // ══════════════════════════════════════
@@ -1467,7 +1618,7 @@ function addItem() {
 // ══════════════════════════════════════
 // MODAL CLOSE HANDLERS
 // ══════════════════════════════════════
-['add-modal','edit-modal','delete-modal','rating-modal','recommend-modal','accept-modal'].forEach(id => {
+['add-modal','edit-modal','delete-modal','rating-modal','recommend-modal','accept-modal','attend-modal'].forEach(id => {
   document.getElementById(id).addEventListener('click', e => {
     if (e.target !== e.currentTarget) return;
     if (id === 'add-modal')        closeAddModal();
@@ -1476,6 +1627,7 @@ function addItem() {
     if (id === 'rating-modal')     { document.getElementById('rating-modal').classList.remove('open'); ratingTarget = null; }
     if (id === 'recommend-modal')  skipRecommend();
     if (id === 'accept-modal')     closeAcceptModal();
+    if (id === 'attend-modal')     closeAttendMoiModal();
   });
 });
 
@@ -1486,6 +1638,7 @@ document.addEventListener('keydown', e => {
   ratingTarget = null;
   skipRecommend();
   closeAcceptModal();
+  closeAttendMoiModal();
 });
 
 // ══════════════════════════════════════
@@ -1503,6 +1656,11 @@ function init() {
       fbSnapshot = fb;
       if (fb && fb.profiles) {
         loadProfile(fb, currentProfile);
+
+        // Charger les sélections "attend moi" de l'autre profil
+        const _other = currentProfile === 'Romain' ? 'Helenou' : 'Romain';
+        const _otherPro = (fb.profiles || {})[_other] || {};
+        otherAttendMoiSet = new Set(Array.isArray(_otherPro.attendMoi) ? _otherPro.attendMoi : []);
 
         // Merge nouveaux items defaultData pas encore dans le profil actif
         if (!Array.isArray(data.youtube)) data.youtube = [];
